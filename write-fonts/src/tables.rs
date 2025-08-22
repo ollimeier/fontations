@@ -5,6 +5,7 @@
 
 pub mod avar;
 pub mod base;
+pub mod cff;
 pub mod cmap;
 pub mod colr;
 pub mod cpal;
@@ -46,6 +47,7 @@ fn do_we_even_serde() {
     struct AllTables {
         avar: avar::Avar,
         base: base::Base,
+        cff: cff::Cff,
         cmap: cmap::Cmap,
         cpal: cpal::Cpal,
         dsig: dsig::Dsig,
@@ -71,6 +73,7 @@ fn do_we_even_serde() {
         vhea: vhea::Vhea,
         vmtx: vmtx::Vmtx,
         vvar: vvar::Vvar,
+        #[cfg(feature = "ift")]
         ift: ift::Ift,
     }
     let tables = AllTables::default();
