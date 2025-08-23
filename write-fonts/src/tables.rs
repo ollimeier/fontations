@@ -75,6 +75,7 @@ fn do_we_even_serde() {
         vhea: vhea::Vhea,
         vmtx: vmtx::Vmtx,
         vvar: vvar::Vvar,
+        #[cfg(feature = "ift")]
         ift: ift::Ift,
     }
     let tables = AllTables::default();
