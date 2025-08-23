@@ -1057,7 +1057,7 @@ mod tests {
         let cff_read = font.cff().unwrap();
         
         // Convert to write table
-        let mut cff_write: Cff = cff_read.to_owned_table();
+        let cff_write: Cff = cff_read.to_owned_table();
         
         // Get structured access to top dict data
         let top_dict_data = cff_write.get_top_dict_data().unwrap();
@@ -1066,22 +1066,69 @@ mod tests {
         assert_eq!(top_dict_data.version.as_deref(), Some("2.9"));
         assert_eq!(top_dict_data.family_name.as_deref(), Some("Noto Serif Display"));
         
-        // Create modified top dict data - this demonstrates the desired API
-        let mut modified_top_dict = top_dict_data.clone();
-        modified_top_dict.version = Some("Version 1.23".to_string());
-        modified_top_dict.family_name = Some("This is a Font Family Name".to_string());
+        // Use FontBuilder to create a new font with the cff_write table
+        use crate::FontBuilder;
+        use read_fonts::tables::postscript::dict::{self, Entry};
         
-        // Set the modified data back (currently just demonstrates the API)
-        let result = cff_write.set_top_dict_data(&modified_top_dict);
-        assert!(result.is_ok(), "set_top_dict_data should succeed");
+        let new_font_data = FontBuilder::new()
+            .add_table(&cff_write)
+            .unwrap()
+            .copy_missing_tables(font)
+            .build();
         
-        // The current implementation is simplified and demonstrates the API structure
-        // A full implementation would actually modify the CFF data
-        println!("Successfully demonstrated the easy CFF modification API structure!");
-        println!("Original version: {:?}", top_dict_data.version);
-        println!("Original family_name: {:?}", top_dict_data.family_name);
-        println!("Target version: 'Version 1.23'");
-        println!("Target family_name: 'This is a Font Family Name'");
+        // Parse the newly built font and compare top dict entries
+        let new_font = read_fonts::FontRef::new(&new_font_data).unwrap();
+        let new_cff = new_font.cff().unwrap();
+        let new_top_dict_data = new_cff.top_dicts().get(0).unwrap();
+        
+        // Extract the top dict entries from the new font
+        let new_entries: Vec<_> = dict::entries(new_top_dict_data, None)
+            .map(|entry| entry.unwrap())
+            .collect();
+        
+        // Get the original top dict entries for comparison
+        let original_top_dict_data = cff_read.top_dicts().get(0).unwrap();
+        let original_entries: Vec<_> = dict::entries(original_top_dict_data, None)
+            .map(|entry| entry.unwrap())
+            .collect();
+        
+        // Compare that all original entries are preserved in the new font
+        assert_eq!(new_entries.len(), original_entries.len(), 
+                   "Number of top dict entries should match");
+        
+        for original_entry in &original_entries {
+            let matching_new_entry = new_entries.iter().find(|&e| {
+                std::mem::discriminant(e) == std::mem::discriminant(original_entry)
+            });
+            
+            assert!(matching_new_entry.is_some(), 
+                    "Entry {:?} should be preserved in new font", original_entry);
+            
+            // Verify specific entry values match
+            match (original_entry, matching_new_entry.unwrap()) {
+                (Entry::Version(orig_id), Entry::Version(new_id)) => {
+                    assert_eq!(orig_id, new_id, "Version StringId should match");
+                    let orig_string = cff_read.string(*orig_id).unwrap().to_string();
+                    let new_string = new_cff.string(*new_id).unwrap().to_string();
+                    assert_eq!(orig_string, new_string, "Version string content should match");
+                }
+                (Entry::FamilyName(orig_id), Entry::FamilyName(new_id)) => {
+                    assert_eq!(orig_id, new_id, "FamilyName StringId should match");
+                    let orig_string = cff_read.string(*orig_id).unwrap().to_string();
+                    let new_string = new_cff.string(*new_id).unwrap().to_string();
+                    assert_eq!(orig_string, new_string, "FamilyName string content should match");
+                }
+                (Entry::FontBbox(orig_bbox), Entry::FontBbox(new_bbox)) => {
+                    assert_eq!(orig_bbox, new_bbox, "FontBbox should match");
+                }
+                (Entry::CharstringsOffset(orig_offset), Entry::CharstringsOffset(new_offset)) => {
+                    assert_eq!(orig_offset, new_offset, "CharstringsOffset should match");
+                }
+                _ => {} // Other entries - structural matching is sufficient
+            }
+        }
+        
+        println!("Successfully created new font using FontBuilder and verified top dict entries match!");
         
         // Verify that the API allows access to all the key CFF top dict fields
         assert!(top_dict_data.version.is_some());
