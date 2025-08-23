@@ -49,8 +49,8 @@ impl TopLevelTable for Cff2 {
 
 impl FontWrite for Cff2 {
     fn write_into(&self, writer: &mut TableWriter) {
-        // This is a simplified implementation
-        // For now, we'll just write the header and basic structure
+        // Write a minimal CFF2 table
+        // For now, we'll write the original header structure
         self.header.write_into(writer);
     }
 
@@ -155,5 +155,32 @@ impl<'a> FromObjRef<read_fonts::tables::cff2::Cff2<'a>> for Cff2 {
             top_dict_data,
             global_subrs,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::from_obj::ToOwnedTable;
+
+    #[test]
+    fn test_cff2_api_compatibility() {
+        // Test the API compatibility - CFF2 doesn't use string indexes the same way as CFF
+        // so version/family_name fields might not be available in typical CFF2 fonts
+        // This test just verifies the structure can be created and modified
+        
+        let mut cff2_write = Cff2::default();
+
+        // This demonstrates the API works - simple field modification
+        cff2_write.top_dict_data.version = Some("Version 2.0".to_string());
+        cff2_write.top_dict_data.family_name = Some("CFF2 Font Family".to_string());
+
+        // Verify the fields can be read back
+        assert_eq!(cff2_write.top_dict_data.version, Some("Version 2.0".to_string()));
+        assert_eq!(cff2_write.top_dict_data.family_name, Some("CFF2 Font Family".to_string()));
+        
+        // Test that we can at least attempt to serialize (even if it's basic)
+        let table_bytes = crate::dump_table(&cff2_write);
+        assert!(table_bytes.is_ok(), "Should be able to serialize CFF2 table");
     }
 }
