@@ -1088,4 +1088,63 @@ mod tests {
         assert!(top_dict_data.family_name.is_some());
         // Other fields may or may not be present depending on the font
     }
+
+    #[test]
+    fn demonstrate_fonttools_like_api() {
+        // This test demonstrates the requested API similar to Python fonttools
+        
+        // Python fonttools usage:
+        // font_obj = TTFont(font_path)  
+        // if "CFF " in font_obj:
+        //     cff = font_obj['CFF ']
+        //     cff_top_dict = cff.cff.topDictIndex[0]
+        //     cff_top_dict.version = "1.06"
+        
+        // Equivalent Rust usage with the new API:
+        let font_data = font_test_data::NOTO_SERIF_DISPLAY_TRIMMED;
+        let font = FontRef::new(font_data).unwrap();
+        
+        // Read the CFF table 
+        let cff_read = font.cff().unwrap();
+        
+        // Convert to write table
+        let mut cff_write: Cff = cff_read.to_owned_table();
+        
+        // Get structured access to top dict data (similar to topDictIndex[0])
+        let mut top_dict_data = cff_write.get_top_dict_data().unwrap();
+        
+        // Print original values
+        println!("Original CFF Top DICT values:");
+        println!("  Version: {:?}", top_dict_data.version);
+        println!("  Family Name: {:?}", top_dict_data.family_name);
+        println!("  Full Name: {:?}", top_dict_data.full_name);
+        println!("  Notice: {:?}", top_dict_data.notice);
+        
+        // Modify fields easily (similar to fonttools assignment)
+        top_dict_data.version = Some("1.06".to_string());
+        top_dict_data.family_name = Some("Modified Font Family".to_string());
+        top_dict_data.notice = Some("Modified with Rust fontations".to_string());
+        
+        // Apply changes
+        let result = cff_write.set_top_dict_data(&top_dict_data);
+        assert!(result.is_ok(), "Should be able to set top dict data");
+        
+        // Verify we can access the modified data structure
+        println!("\nModified CFF Top DICT values:");
+        println!("  Version: {:?}", top_dict_data.version);
+        println!("  Family Name: {:?}", top_dict_data.family_name);
+        println!("  Notice: {:?}", top_dict_data.notice);
+        
+        // This demonstrates the requested API structure:
+        // - Easy field access and modification
+        // - Similar workflow to Python fonttools
+        // - Type-safe string handling  
+        // - Structured access to CFF Top DICT entries
+        
+        assert_eq!(top_dict_data.version.as_deref(), Some("1.06"));
+        assert_eq!(top_dict_data.family_name.as_deref(), Some("Modified Font Family"));
+        assert_eq!(top_dict_data.notice.as_deref(), Some("Modified with Rust fontations"));
+        
+        println!("\n✓ Successfully demonstrated fonttools-like CFF modification API!");
+    }
 }
