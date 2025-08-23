@@ -5,6 +5,8 @@
 
 pub mod avar;
 pub mod base;
+pub mod cff;
+pub mod cff2;
 pub mod cmap;
 pub mod colr;
 pub mod cpal;
@@ -46,6 +48,8 @@ fn do_we_even_serde() {
     struct AllTables {
         avar: avar::Avar,
         base: base::Base,
+        cff: cff::Cff,
+        cff2: cff2::Cff2,
         cmap: cmap::Cmap,
         cpal: cpal::Cpal,
         dsig: dsig::Dsig,
